@@ -1,8 +1,16 @@
-# SBBI 2026 — Connectome Practical 
+<div>
+  <img
+    src="images_2026/SBBI_logo.png"
+    alt="Small Brains, Big Ideas 2026 logo"
+    width="160"
+  >
 
-<p align="right">
-  <img src="images_2026/SBBI_logo.png" alt="Small Brains, Big Ideas 2026 logo" width="150">
-</p>
+  <h1 align="center">SBBI 2026 — Connectome Practical</h1>
+
+  
+</div>
+
+<br>
 
 **Small Brains, Big Ideas 2026**
 
@@ -16,8 +24,8 @@ This repository accompanies the connectomics practical of the **Small Brains, Bi
 
 <p align="center">
   <em>
-    Example of neuronal mesh visualisation using <strong>Coda</strong> and the
-    <strong>Male CNS connectome dataset</strong>. Left and right PPL101
+    Example of neuronal meshes visualised using <strong>Coda</strong> and the
+    <strong>male CNS connectome dataset</strong>. Left and right PPL101
     dopaminergic neurons are shown in green and magenta, respectively.
   </em>
 </p>
