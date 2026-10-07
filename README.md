@@ -53,7 +53,8 @@ By the end of the practical, you should be able to:
 - neuPrint -> Explore neurons and connectivity (hemibrain, maleCNS, others) https://neuprint.janelia.org/
 - Virtual Fly Brain -> Integrate anatomy, genetics and connectomics https://www.virtualflybrain.org/
 - CODA ->  Circuit analysis and neuronal visualisation https://coda.science/
-
+- Natverse (R) -> R ecosystem for accessing, analysing and visualising neuroanatomical and connectomic data https://natverse.org/
+- NAVis (Python) -> Python library for neuronal morphology analysis and visualisation; the Python counterpart to the natverse ecosystem https://navis-org.github.io/navis/
 
 ---
 
