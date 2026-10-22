@@ -51,6 +51,7 @@ By the end of the practical, you should be able to:
 
 - Codex ->  Explore neurons and connectivity (FAFB, BANC, maleCNS, others) https://codex.flywire.ai/
 - neuPrint -> Explore neurons and connectivity (hemibrain, maleCNS, others) https://neuprint.janelia.org/
+- maleCNS -> Explore neurons, connectivity and sexual dimorphic neurons https://male-cns.janelia.org/
 - Virtual Fly Brain -> Integrate anatomy, genetics and connectomics https://www.virtualflybrain.org/
 - CODA ->  Circuit analysis and neuronal visualisation https://coda.science/
 - Natverse (R) -> R ecosystem for accessing, analysing and visualising neuroanatomical and connectomic data https://natverse.org/
@@ -58,7 +59,7 @@ By the end of the practical, you should be able to:
 
 ---
 
-## Practical curated datasets
+## Tutorials and curated datasets
 
 To minimise dependence on internet connectivity during the course, we will use **curated datasets prepared in advance** for some exercises for this course.
 
@@ -66,14 +67,7 @@ To minimise dependence on internet connectivity during the course, we will use *
 
 Please download the datasets **before the practical session**.
 
-
----
-
-## 🚧 Repository status
-
-This repository is currently under development.
-
-Materials, datasets, notebooks, and exercises will be updated before **Small Brains, Big Ideas 2026**.
+Instructions for tutorials 1 and 2 can be found in the course protocol book (page 58) and in the course presentation https://docs.google.com/presentation/d/1_kGk7_UN5Hz32VMo6MVQ2u0SmJD1cClqROnY-BvqdX4/edit?usp=sharing. Additional introductory exercises in R are available in the supplementary pipelines folder.
 
 
 ---
@@ -81,5 +75,10 @@ Materials, datasets, notebooks, and exercises will be updated before **Small Bra
 ## 📖 Citation
 
 For publication purposes please cite the original connectome datasets and software used in your analyses.
-Dataset-specific references and recommended citations will be provided alongside each practical exercise.
+
+---
+
+## Disclaimer
+
+This GitHub repository and its tutorials have been designed exclusively for educational purposes as part of the Small Brains, Big Ideas (SBBI) course (https://smallbrains.org/).
 
