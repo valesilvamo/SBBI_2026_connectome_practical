@@ -1,0 +1,733 @@
+---
+title: "SBBI_2026_introduction_pipeline"
+output: html_document
+date: "2026-10-23"
+---
+
+
+#Connectome practical: Exploring neuronal connectivity of the male (male CNS) and the female (FAFB/FlyWire) Drosophila datasets
+
+The pipeline will use 2 curated datasets (differents to the ones used in Conda.science!!!!!). Download it from Dropbox folder "Datasets fot tutorial 3 (R pipeline)" (download them here: https://www.dropbox.com/scl/fo/qoui26oplmpmoqyt2mvuv/AM0kPfZXAeSkbFlS_A-mHso?rlkey=5u15cn0ltztsvy0o9skuzo7rf&st=hja1bn8z&dl=0):
+
+- Male CNS: male-cns-v1.0-minconf-0.5.feather
+- Female FAFB/FlyWire: female-fafb-neurons.csv
+
+We'll start with PPL101 as the example neuron, set the minimum input and output connection weight to 5, and identify the 25 strongest connectivity partners (you can change these parameters in order to study your neurons)
+
+The workflow will produce:
+1. Imported datasets named male_cns and female_fafb.
+2. Identification of the neuron(s) of interest in both datasets.
+3. Separate rankings of upstream (input) and/or downstream (output) partners.
+4. Plot best partners (more connected) for female in magenta and male in green.
+5. Pie charts showing the relative contribution of the top 25 partners.
+6. Neuroglancer links for visual inspection of the selected neurons.
+
+An important scientific consideration: Male CNS and FAFB are not directly equivalent connectomes. The male dataset covers the whole CNS (brain + CNS), whereas FAFB covers the adult female brain. In addition, their reconstruction and annotation pipelines differ. If you want to compare between the 2 datasets only normalise the connectivity.
+For more details about the technical differences check out the papers: Zheng et al., 2018 (doi: 10.1016/j.cell.2018.06.019); Schlegel et al 2024 (doi: 10.1038/s41586-024-07686-5), and Berg et al., 2026 (doi: 10.1016/j.cell.2026.08.015)
+
+Another important distinction is that PPL101 is a neuron label "type", you could also identified them by their ID, class, superclass. Have in consideration that sometimes type labels varies a bit between datasets. Please check on http://codex.flywire.ai (FAFB/FlyWire) and/or http://https://neuprint.janelia.org/ (male CNS) for the exact name of your neurons. Or explore the Data tables.
+
+
+
+#1. Install and load packages
+Do this step once and then eliminate it from the code*
+```{r, eval=FALSE}
+# Run once to install packages
+install.packages(c(
+  "dplyr", "tidyr", "ggplot2", "readr",
+  "arrow", "stringr", "scales", "patchwork"
+))
+
+install.packages("Polychrome")
+
+
+#For this packages you must to follow the instructions here (Jefferis Lab): 
+#https://natverse.org/install/
+#https://github.com/natverse/coconatfly
+
+install.packages("natmanager")
+natmanager::install(pkgs = "coconatfly")
+
+```
+
+
+#2) Load the libraries
+```{r}
+library(natverse)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(readr)
+library(arrow)
+library(stringr)
+library(scales)
+library(patchwork)
+library(coconatfly)
+
+```
+
+#3) Import datasets
+Please copy pase here the location in your computer of your datasets!! (now is directed to my computer folders)
+```{r}
+
+female_fafb <- read_csv( "/Users/valesilvamo/Dropbox/SBBI 2026/SBBI_2026_connectome_practical/Datasets fot tutorial 3 (R pipeline)/female-fafb-consolidated_cell_types.csv", col_types = cols(.default = col_character())) %>% filter(!is.na(primary_type))
+
+male_cns <- read_feather("/Users/valesilvamo/Dropbox/SBBI 2026/SBBI_2026_connectome_practical/Datasets fot tutorial 3 (R pipeline)/male-cns-v1.0-minconf-0.5.feather") %>% filter(!is.na(type))
+
+```
+
+## Inspect the datasets
+```{r}
+
+dim(female_fafb)
+dim(male_cns)
+
+#female_fafb should have 138,327 entries and 3 total columns
+#male_cns 164,506 entries and 36 total columns 
+#if you don't see these numbers your are working with the wrong datasets, come back to Dropbox and download tutorial 3!
+```
+
+
+```{r}
+#feel free to explore in details the tables (more information for the female datasets/column meaning here: female https://codex.flywire.ai/api/download?dataset=fafb&data_version=783; male https://male-cns.janelia.org/download/#__tabbed_3_2)
+names(female_fafb)
+names(male_cns)
+
+glimpse(female_fafb)
+glimpse(male_cns)
+
+```
+
+
+#4) Explore the connectivity using coconatfly package (https://github.com/natverse/coconatfly)
+```{r}
+
+# 1. PARAMETERS (feel free to study other neurons and use different thresholds)
+
+neuron_name <- "PPL101"
+threshold <- 5
+
+# 2. FIND NEURONS IN BOTH DATASETS
+
+# Female FAFB
+female_ids <- female_fafb %>%
+  filter(primary_type == neuron_name) %>%
+  pull(root_id) %>%
+  as.character()
+
+# Male CNS
+male_ids <- male_cns %>%
+  filter(type == neuron_name) %>%
+  pull(bodyId) %>%
+  as.character()
+
+# Check identified neurons
+print(female_ids)
+print(male_ids)
+
+
+# 3. RETRIEVE INPUTS (you can also do it for only outputs, or both, check the help section of the packages for more details)
+
+
+# Female FAFB / FlyWire
+female_partners <- cf_partners(
+  cf_ids(flywire = female_ids),
+  partners = c("inputs"),
+  threshold = threshold
+)
+
+# Male CNS
+male_partners <- cf_partners(
+  cf_ids(malecns = male_ids),
+  partners = c("inputs"),
+  threshold = threshold
+)
+
+# 4. INSPECT RESULTS
+
+head(female_partners)
+head(male_partners)
+
+dim(female_partners)
+dim(male_partners)
+
+# 5. FILTER UNTYPED NEURONS
+
+female_partners <- female_partners %>%
+  filter(
+    !is.na(type),
+    !type %in% c("", "Unannotated")
+  )
+
+male_partners <- male_partners %>%
+  filter(
+    !is.na(type),
+    !type %in% c("", "Unannotated")
+  )
+
+         
+```
+
+
+#5) Normalisation and ranking the partners of your neurons of interest 
+Important to have in consideration that both dataset were obtain with different Electron microsocopies, different techniques and also are different animals so always normalise instead of using raw data to see patterns. 
+
+Remember we are working with PPL101 but you can change that and look your circuit of interest!
+```{r}
+
+# ==============================================
+# 1. CREATE NEURON TYPE LOOKUP TABLES
+# ==============================================
+
+female_types <- female_fafb %>%
+  transmute(
+    partner_id = as.character(root_id),
+    partner_type = as.character(primary_type)
+  ) %>%
+  distinct(partner_id, .keep_all = TRUE)
+
+male_types <- male_cns %>%
+  transmute(
+    partner_id = as.character(bodyId),
+    partner_type = as.character(type)
+  ) %>%
+  distinct(partner_id, .keep_all = TRUE)
+
+
+# ==============================================
+# 2. EXTRACT INDIVIDUAL INPUT PARTNERS
+# ==============================================
+
+female_individual <- female_partners %>%
+  mutate(
+    pre_id = as.character(pre_id),
+    post_id = as.character(post_id)
+  ) %>%
+  filter(post_id %in% female_ids) %>%
+  transmute(
+    sex = "Female",
+    neuron_id = post_id,
+    partner_id = pre_id,
+    weight = as.numeric(weight)
+  ) %>%
+  left_join(female_types, by = "partner_id")
+
+male_individual <- male_partners %>%
+  mutate(
+    pre_id = as.character(pre_id),
+    post_id = as.character(post_id)
+  ) %>%
+  filter(post_id %in% male_ids) %>%
+  transmute(
+    sex = "Male",
+    neuron_id = post_id,
+    partner_id = pre_id,
+    weight = as.numeric(weight)
+  ) %>%
+  left_join(male_types, by = "partner_id")
+
+
+# ==============================================
+# 3. COMBINE INDIVIDUAL PARTNERS
+# ==============================================
+
+all_partners <- bind_rows(
+  female_individual,
+  male_individual
+) %>%
+  filter(
+    !is.na(partner_type),
+    !tolower(trimws(partner_type)) %in%
+      c("", "unannotated")
+  ) %>%
+  group_by(sex, neuron_id, partner_id, partner_type) %>%
+  summarise(
+    weight = sum(weight, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+
+# ==============================================
+# 4. NORMALISE PER PPL101 NEURON
+# ==============================================
+
+all_partners <- all_partners %>%
+  group_by(sex, neuron_id) %>%
+  mutate(
+    total_weight = sum(weight),
+    proportion = weight / total_weight,
+    percentage = proportion * 100
+  ) %>%
+  arrange(desc(weight), .by_group = TRUE) %>%
+  mutate(rank = row_number()) %>%
+  ungroup()
+
+
+# ==============================================
+# 5. GROUP PARTNERS BY TYPE
+# ==============================================
+
+all_partners_group_by_type <- all_partners %>%
+  group_by(sex, neuron_id, partner_type) %>%
+  summarise(
+    weight = sum(weight),
+    n_neurons = n_distinct(partner_id),
+    .groups = "drop"
+  ) %>%
+  group_by(sex, neuron_id) %>%
+  mutate(
+    total_weight = sum(weight),
+    proportion = weight / total_weight,
+    percentage = proportion * 100
+  ) %>%
+  arrange(desc(weight), .by_group = TRUE) %>%
+  mutate(rank = row_number()) %>%
+  ungroup()
+
+
+# ==============================================
+# 6. CHECK NORMALISATION
+# ==============================================
+
+# Individual partners
+all_partners %>%
+  group_by(sex, neuron_id) %>%
+  summarise(
+    total_percentage = sum(percentage),
+    .groups = "drop"
+  )
+
+# Grouped by neuronal type
+all_partners_group_by_type %>%
+  group_by(sex, neuron_id) %>%
+  summarise(
+    total_percentage = sum(percentage),
+    .groups = "drop"
+  )
+
+
+# ==============================================
+# 7. EXPORT TABLES
+# ==============================================
+
+write.csv(
+  all_partners,
+  "PPL101_all_individual_partners.csv",
+  row.names = FALSE
+)
+
+write.csv(
+  all_partners_group_by_type,
+  "PPL101_partners_grouped_by_type.csv",
+  row.names = FALSE
+)
+
+
+
+```
+
+
+#6) Frecuency plots
+```{r}
+# ==============================================
+# FREQUENCY DISTRIBUTION PER PARTNER ID
+# COMBINING LEFT AND RIGHT PPL101
+# ==============================================
+
+
+female_colour <- "#D81B60"
+male_colour   <- "#238B45"
+
+# 1. COMBINE INPUTS TO LEFT AND RIGHT PPL101 (both hemispheres, always important to analyse them independently and together)
+# Each presynaptic partner ID appears only once
+# per dataset.
+
+all_partners_combined <- all_partners %>%
+  group_by(sex, partner_id) %>%
+  summarise(
+    weight = sum(weight, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+# 2. FREQUENCY PLOT
+
+frequency_individual <- ggplot(
+  all_partners_combined,
+  aes(x = weight, fill = sex)
+) +
+  geom_histogram(
+    bins = 40,
+    colour = "white"
+  ) +
+  facet_wrap(~sex, scales = "free") +
+  scale_fill_manual(
+    values = c(
+      Female = female_colour,
+      Male = male_colour
+    )
+  ) +
+  labs(
+    title = paste(
+      neuron_name,
+      "- Individual input partners"
+    ),
+    subtitle = "Inputs to left and right PPL101 combined",
+    x = "Total number of synapses (edge-weight) per partner neuron",
+    y = "Number of presynaptic neurons"
+  ) +
+  theme_classic(base_size = 12) +
+  theme(
+    legend.position = "none",
+    plot.title = element_text(face = "bold")
+  )
+
+print(frequency_individual)
+
+# 3. SAVE FIGURE
+
+ggsave(
+  paste0(neuron_name, "_frequency_combined_LR.png"),
+  frequency_individual,
+  width = 10,
+  height = 5,
+  dpi = 300
+)
+```
+
+
+#7) Plot of the 25 top inputs partners grouped by type (rank)
+```{r}
+
+# ==============================================
+# 7. TOP 25 INPUT PARTNERS GROUPED BY TYPE
+# ==============================================
+
+# PARAMETERS
+top_n <- 25 # <-- (you can edit this)
+
+female_colour <- "#D81B60"
+male_colour   <- "#238B45"
+
+
+# ----------------------------------------------
+# 1. COMBINE LEFT AND RIGHT PPL101 BY TYPE
+# ----------------------------------------------
+
+# Start from individual synaptic weights,
+# not previously normalised proportions.
+
+combined_partners_by_type <- all_partners %>%
+  group_by(sex, partner_type) %>%
+  summarise(
+    weight = sum(weight, na.rm = TRUE),
+    n_partner_neurons = n_distinct(partner_id),
+    .groups = "drop"
+  ) %>%
+  group_by(sex) %>%
+  mutate(
+    total_weight = sum(weight),
+    proportion = weight / total_weight,
+    percentage = proportion * 100
+  ) %>%
+  arrange(desc(weight), .by_group = TRUE) %>%
+  mutate(rank = row_number()) %>%
+  ungroup()
+
+
+# ----------------------------------------------
+# 2. CHECK NORMALISATION
+# ----------------------------------------------
+
+combined_partners_by_type %>%
+  group_by(sex) %>%
+  summarise(
+    n_types = n(),
+    total_synapses = sum(weight),
+    total_percentage = sum(percentage),
+    .groups = "drop"
+  )
+
+
+# ----------------------------------------------
+# 3. SELECT TOP 25 TYPES PER DATASET
+# ----------------------------------------------
+
+top25_types <- combined_partners_by_type %>%
+  group_by(sex) %>%
+  slice_min(
+    order_by = rank,
+    n = top_n,
+    with_ties = FALSE
+  ) %>%
+  ungroup()
+
+# Inspect results
+View(top25_types)
+
+
+# ----------------------------------------------
+# 4. PREPARE PLOT DATA
+# ----------------------------------------------
+
+plot_data <- top25_types %>%
+  mutate(
+    sex = factor(sex, levels = c("Female", "Male")),
+    partner_label = paste(
+      partner_type, sex, sep = "___"
+    )
+  )
+
+
+# ----------------------------------------------
+# 5. BAR PLOT
+# ----------------------------------------------
+
+ranking_plot <- ggplot(
+  plot_data,
+  aes(
+    x = reorder(partner_label, percentage),
+    y = percentage,
+    fill = sex
+  )
+) +
+  geom_col(width = 0.75) +
+  coord_flip() +
+  facet_wrap(
+    ~sex,
+    scales = "free_y"
+  ) +
+  scale_x_discrete(
+    labels = function(x) sub("___.*$", "", x)
+  ) +
+  scale_fill_manual(
+    values = c(
+      Female = female_colour,
+      Male = male_colour
+    )
+  ) +
+  labs(
+    title = paste(
+      neuron_name,
+      "- Top 25 presynaptic neuronal types"
+    ),
+    subtitle = "Combined left and right target neurons",
+    x = "Presynaptic neuronal type",
+    y = "Percentage of total input synaptic weight (%)"
+  ) +
+  theme_classic(base_size = 12) +
+  theme(
+    strip.text = element_text(face = "bold"),
+    plot.title = element_text(face = "bold"),
+    axis.text.y = element_text(size = 9),
+    legend.position = "none"
+  )
+
+print(ranking_plot)
+
+
+# ----------------------------------------------
+# 6. SAVE RANKING AND FIGURE
+# ----------------------------------------------
+
+write.csv(
+  combined_partners_by_type,
+  paste0(neuron_name, "_combined_ranking_by_type.csv"),
+  row.names = FALSE
+)
+
+ggsave(
+  paste0(neuron_name, "_top25_types.png"),
+  ranking_plot,
+  width = 13,
+  height = 10,
+  dpi = 300
+)
+
+```
+
+# 8) Pie chart plot for the top 25 input top partners
+```{r}
+
+# ----------------------------------------------
+# 1. PREPARE DATA
+# ----------------------------------------------
+
+pie_data <- combined_partners_by_type %>%
+  mutate(
+    category = if_else(
+      rank <= top_n,
+      partner_type,
+      "Other types"
+    )
+  ) %>%
+  group_by(sex, category) %>%
+  summarise(
+    percentage = sum(percentage),
+    .groups = "drop"
+  )
+
+# ----------------------------------------------
+# 2. CREATE VIBRANT, CONSISTENT COLOURS
+# ----------------------------------------------
+
+neuron_types <- sort(unique(
+  pie_data$category[pie_data$category != "Other types"]
+))
+
+type_colours <- grDevices::hcl.colors(
+  n = length(neuron_types),
+  palette = "Dynamic"
+)
+
+names(type_colours) <- neuron_types
+
+type_colours <- c(
+  type_colours,
+  "Other types" = "#BDBDBD"
+)
+
+# ----------------------------------------------
+# 3. ADD PERCENTAGE LABELS
+# ----------------------------------------------
+
+pie_data <- pie_data %>%
+  mutate(
+    label = if_else(
+      percentage >= 2,
+      paste0(round(percentage, 1), "%"),
+      ""
+    )
+  )
+
+# ----------------------------------------------
+# 4. PIE CHART
+# ----------------------------------------------
+
+pie_plot <- ggplot(
+  pie_data,
+  aes(
+    x = "",
+    y = percentage,
+    fill = category
+  )
+) +
+  geom_col(
+    width = 1,
+    colour = "white",
+    linewidth = 0.3
+  ) +
+  geom_text(
+    aes(label = label),
+    position = position_stack(vjust = 0.5),
+    size = 3,
+    colour = "black"
+  ) +
+  coord_polar(theta = "y") +
+  facet_wrap(~sex) +
+  scale_fill_manual(
+    values = type_colours
+  ) +
+  labs(
+    title = paste(
+      neuron_name,
+      "- Input connectivity by neuronal type"
+    ),
+    subtitle = "Top 25 presynaptic types | Left and right combined",
+    fill = "Presynaptic neuronal type"
+  ) +
+  theme_void(base_size = 12) +
+  theme(
+    strip.text = element_text(
+      face = "bold",
+      size = 13
+    ),
+    plot.title = element_text(face = "bold"),
+    legend.position = "right",
+    legend.text = element_text(size = 8)
+  )
+
+print(pie_plot)
+
+# ----------------------------------------------
+# 5. SAVE FIGURE
+# ----------------------------------------------
+
+ggsave(
+  paste0(neuron_name, "_top25_types_piechart.png"),
+  pie_plot,
+  width = 15,
+  height = 8,
+  dpi = 300
+)
+
+```
+
+# 9) Example of how to visualise our neurons of interest and/or its partners! 
+neuroglancer is a platform to visualise the neurons. More details here: https://allenswdb.github.io/anatomy/microns-em/em-neuroglancer.html
+```{r}
+
+# ----------------------------------------------
+# 1. SELECT NEURONS TO VISUALISE
+# ----------------------------------------------
+
+#First! female
+
+# PPL101 neurons (left and right)
+target_ids <- as.character(female_ids)
+
+# Top 25 individual presynaptic partners
+top_partner_ids <- all_partners %>%
+  filter(sex == "Female") %>%
+  group_by(partner_id) %>%
+  summarise(
+    weight = sum(weight),
+    .groups = "drop"
+  ) %>%
+  slice_max(
+    weight,
+    n = 25,
+    with_ties = FALSE
+  ) %>%
+  pull(partner_id) %>%
+  as.character()
+
+# ----------------------------------------------
+# 2. GENERATE NEUROGLANCER LINKS
+# ----------------------------------------------
+
+# PPL101 neurons only
+ppl101_url <- fafbseg::flywire_scene(
+  ids = target_ids,
+  open = FALSE
+)
+
+# PPL101 and its top 25 input partners
+network_url <- fafbseg::flywire_scene(
+  ids = unique(c(target_ids, top_partner_ids)),
+  open = FALSE
+)
+
+# ----------------------------------------------
+# 3. OPEN IN BROWSER
+# ----------------------------------------------
+
+cat("PPL101 Neuroglancer link:\n", ppl101_url, "\n")
+
+cat("PPL101 + top 25 partners:\n", network_url, "\n")
+
+# Open selected scene
+browseURL(ppl101_url)
+browseURL(network_url)
+
+```
+
+
+
+#Last bit!
+```{r}
+#For better images please check it out --> https://allenswdb.github.io/anatomy/microns-em/em-neuroglancer.html
+#as well the connectome papers, all of them have their own "neuroglancer" link on material and methods with some extra layers of shape of brains, neuropils, etc. Super helpful 
+
+
+```
+
