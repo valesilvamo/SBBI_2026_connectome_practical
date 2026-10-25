@@ -67,7 +67,7 @@ To minimise dependence on internet connectivity during the course, we will use *
 
 Please download the datasets **before the practical session**.
 
-Instructions for tutorials 1 and 2 can be found in the course protocol book (page 58) and in the course presentation https://docs.google.com/presentation/d/1_kGk7_UN5Hz32VMo6MVQ2u0SmJD1cClqROnY-BvqdX4/edit?usp=sharing. Additional introductory exercises in R are available in the supplementary pipelines folder.
+Instructions for tutorials 1 and 2 can be found in the course protocol book (page 58-61) and in the course presentation https://docs.google.com/presentation/d/1_kGk7_UN5Hz32VMo6MVQ2u0SmJD1cClqROnY-BvqdX4/edit?usp=sharing. Additional introductory exercises in R are available in the supplementary pipelines folder.
 
 
 ---
